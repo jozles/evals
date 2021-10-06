@@ -78,7 +78,7 @@ void calibrate()
         if(cnt2<mincnt2){mincnt2=cnt2;}
         if(cnt2>maxcnt2){maxcnt2=cnt2;}
         Serial.print(i);Serial.print(" ");Serial.print(cnt1);Serial.print(" ");Serial.print(mincnt1);Serial.print(" ");Serial.print(maxcnt1);
-        Serial.print(" | ");Serial.print(cnt1);Serial.print(" ");Serial.print(mincnt1);Serial.print(" ");Serial.println(maxcnt1);
+        Serial.print(" | ");Serial.print(cnt2);Serial.print(" ");Serial.print(mincnt2);Serial.print(" ");Serial.println(maxcnt2);
     }
     lowTresh1=(maxcnt1-mincnt1)+(maxcnt1-mincnt1)/5;
     highTresh1=lowTresh1+lowTresh1/4;
@@ -96,9 +96,11 @@ void count(uint8_t samples,uint16_t* cnt1, uint16_t* cnt2)
     *cnt1=0;
     *cnt2=0;
 
+    DIRECT_MODE_OUTPUT(sReg, sBit);             // receive output
+    DIRECT_WRITE_LOW(sReg, sBit);               // common low    
+
     for(uint8_t i=0;i<samples;i++){
     
-        DIRECT_WRITE_LOW(sReg, sBit);               // common low    
         DIRECT_MODE_INPUT(rReg1, rBit1);            // receive input
         DIRECT_MODE_OUTPUT(rReg1, rBit1);           // receive output
         DIRECT_WRITE_LOW(rReg1, rBit1);             // receive low
@@ -107,18 +109,19 @@ void count(uint8_t samples,uint16_t* cnt1, uint16_t* cnt2)
         DIRECT_MODE_OUTPUT(rReg2, rBit2);           // receive output
         DIRECT_WRITE_LOW(rReg2, rBit2);             // receive low
         
-        //delayMicroseconds(4);
+        bool r1=false;                              // DIRECT_READ(rReg1, rBit1);
+        bool r2=false;                              // DIRECT_READ(rReg2, rBit2);
+
         noInterrupts();
+
         DIRECT_MODE_INPUT(rReg1, rBit1);            // receive input (capacitor is empty)
         DIRECT_MODE_INPUT(rReg2, rBit2);            // receive input (capacitor is empty)
-        DIRECT_WRITE_HIGH(sReg, sBit);              // begin filling
+        
+        DIRECT_WRITE_HIGH(sReg, sBit);              // begin filling common high
 
-        bool r1=DIRECT_READ(rReg1, rBit1);
-        bool r2=DIRECT_READ(rReg2, rBit2);
-        while(!r1 && !r2){if(!r1){(*cnt1)++;r1=DIRECT_READ(rReg1, rBit1);} if(!r2){(*cnt2)++;r2=DIRECT_READ(rReg2, rBit2);}}
+        while(!r1 || !r2){if(!r1){(*cnt1)++;r1=DIRECT_READ(rReg1, rBit1);} if(!r2){(*cnt2)++;r2=DIRECT_READ(rReg2, rBit2);}}
     
         interrupts();
-        DIRECT_WRITE_HIGH(sReg, sBit);              // common high
         
         DIRECT_WRITE_HIGH(rReg1, rBit1);            // receive high    
         DIRECT_MODE_OUTPUT(rReg1, rBit1);           // receive output
@@ -128,15 +131,19 @@ void count(uint8_t samples,uint16_t* cnt1, uint16_t* cnt2)
         DIRECT_MODE_OUTPUT(rReg2, rBit2);           // receive output
         DIRECT_WRITE_HIGH(rReg2, rBit2);            // receive high
         
+        r1=true;                                    // DIRECT_READ(rReg1, rBit1);
+        r2=true;                                    // DIRECT_READ(rReg2, rBit2);
+
         noInterrupts();
+
         DIRECT_MODE_INPUT(rReg1, rBit1);            // receive input (capacitor is empty)
         DIRECT_MODE_INPUT(rReg2, rBit2);            // receive input (capacitor is empty)
-        DIRECT_WRITE_LOW(sReg, sBit);               // begin filling    
+        
+        DIRECT_WRITE_LOW(sReg, sBit);               // common low begin filling    
 
-        while(DIRECT_READ(rReg1, rBit1)){(*cnt1)++;}
+        while(r1 || r2){if(r1){(*cnt1)++;r1=DIRECT_READ(rReg1, rBit1);} if(r2){(*cnt2)++;r2=DIRECT_READ(rReg2, rBit2);}}
 
         interrupts();
-
     }
 }
 
@@ -159,10 +166,12 @@ void loop()
         else {Serial.print("     ");}
     }
 
+    Serial.print(" | ");
+
     Serial.print(lowTresh2);Serial.print("/");Serial.print(highTresh2);Serial.print("-");Serial.print(cnt2);
 
     if((millis()-debounce2)>DEBOUNCE){
-        if(cnt2>highTresh2){Serial.print(" ON ");if(prev2!='I'){prev2='I';k1++;debounce2=millis();}}
+        if(cnt2>highTresh2){Serial.print(" ON ");if(prev2!='I'){prev2='I';k2++;debounce2=millis();}}
         else if(cnt2<lowTresh2){Serial.print(" OFF ");if(prev2!='O'){prev2='O';debounce2=millis();}}
         else {Serial.print("     ");}
     }
