@@ -14,10 +14,11 @@
 #define DIRECT_WRITE_HIGH(base, mask)   ((*((base)+2)) |= (mask))
 #endif
 
-#define MAXKEY 2        // greater or equal to cntNb !!
-#define NBCNTMEM 16     // puissance de 2 !!
-#define CALIB NBCNTMEM  // nbre de count() en calibration
-#define DEBOUNCE 50
+#define MAXKEY 2                // greater or equal to cntNb !!
+#define NBCNTMEM 0x0fff         // 16     // puissance de 2 !!
+#define CALIB 16                // NBCNTMEM  // nbre de count() en calibration
+#define DEBOUNCE 60
+#define CHGSTROBE 0xffff        // millis() strobe mean's update to protect from near finger
 
 class Capat{
     public:
@@ -35,16 +36,17 @@ class Capat{
         uint32_t totalMem[MAXKEY];                  // key total cnt value
         bool     keyVal[MAXKEY];                    // off/on
         bool     keyChge[MAXKEY];                   // last update key change
+        uint32_t keyChSt[MAXKEY];                   // key change time
 
     private:
         void     meanUpdate();
 
         uint8_t  samples;                           // samples nbr to perform
         uint8_t  keyNb;                             // nbr of active keys
-        uint16_t cntMem[NBCNTMEM*MAXKEY];           // all keys cnt memorys for mean calculation
+        //uint16_t cntMem[NBCNTMEM*MAXKEY];           // all keys cnt memorys for mean calculation
         
         uint8_t  prevCntMem[MAXKEY];                // key prev ptr in cntMem
-        uint16_t debounce[MAXKEY];                  // key last millis
+        uint32_t debounce[MAXKEY];                  // key last millis
         
         IO_REG_TYPE	sBit;
         volatile IO_REG_TYPE *sReg; 

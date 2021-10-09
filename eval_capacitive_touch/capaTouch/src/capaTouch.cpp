@@ -29,7 +29,7 @@ void Capat::init(uint8_t samp,uint8_t common,uint8_t* touch,uint8_t touchNb)
     for(uint8_t i=0;i<keyNb;i++){
         rBit[i] = PIN_TO_BITMASk(touch[i]);
         rReg[i] = PIN_TO_BASEREG(touch[i]);
-    Serial.print(touch[i]);Serial.print("-");
+    Serial.print(touch[i]);if(i<keyNb-1){Serial.print(";");}
     }
     Serial.println();
 }
@@ -37,30 +37,53 @@ void Capat::init(uint8_t samp,uint8_t common,uint8_t* touch,uint8_t touchNb)
 void Capat::calibrate()
 {
     memset(prevCntMem,0x00,sizeof(uint8_t)*MAXKEY);
-    memset(debounce,0x00,sizeof(uint16_t)*MAXKEY);
+    memset(debounce,0x00,sizeof(uint32_t)*MAXKEY);
+    memset(keyChSt,0x00,sizeof(uint32_t)*MAXKEY);
 
-    for(uint8_t i=0;i<keyNb;i++){              // precharge to allow mean calculation start
-        #define MAXMEAN 0x07ff
-        totalMem[i]=MAXMEAN*NBCNTMEM;
-        meank[i]=MAXMEAN;
-        for(uint8_t j=0;j<NBCNTMEM;j++){
-            cntMem[NBCNTMEM*i+j]=MAXMEAN;
+    uint16_t maxCount[MAXKEY];
+    memset(maxCount,0x00,(uint32_t)MAXKEY*sizeof(uint16_t));
+    Serial.print("s=");Serial.println((uint16_t)sizeof(uint16_t));
+    for(uint8_t i=0;i<CALIB;i++){
+        count();
+        Serial.print(i);
+        for(uint8_t k=0;k<keyNb;k++){
+            if(cntk[k]>maxCount[k]){maxCount[k]=cntk[k];}
+            Serial.print("(");Serial.print(k);Serial.print(")");Serial.print(cntk[k]);Serial.print(" ");Serial.print(maxCount[k]);Serial.print(" ");
         }
+        Serial.println();
     }
 
+    for(uint8_t i=0;i<keyNb;i++){              // precharge to allow mean calculation start
+        //#define MAXMEAN 0x00cf
+        //uint32_t m=(uint32_t)0x01ff*(uint32_t)0x3fff;           //0x007fffff;
+        //totalMem[i]=(uint32_t)MAXMEAN*(uint32_t)NBCNTMEM;
+        totalMem[i]=(uint32_t)maxCount[i]*(uint32_t)NBCNTMEM;
+        //meank[i]=MAXMEAN;
+        meank[i]=maxCount[i];
+        Serial.print(i);Serial.print(" ");Serial.print(maxCount[i]);Serial.print(" ");
+        //for(uint8_t j=0;j<NBCNTMEM;j++){
+        //    cntMem[NBCNTMEM*i+j]=MAXMEAN;
+        //}
+    }
+    Serial.println();
+/*
     for(uint8_t h=0;h<10;h++){count();}     // heating
 
     for(uint8_t i=0;i<CALIB;i++){
         count();delay(100);
         meanUpdate();
-        for(uint8_t j=0;j<keyNb;j++){debounce[j]=0;}
         Serial.print(i);
+        for(uint8_t j=0;j<keyNb;j++){debounce[j]=0;}
+        
         for(uint8_t v=0;v<1;v++){
-            Serial.print(" ");Serial.print(cntk[v]);Serial.print(" ");
-            for(uint8_t j=0;j<NBCNTMEM;j++){Serial.print(cntMem[v*NBCNTMEM+j]);Serial.print(",");}
+            Serial.print("(");Serial.print(v);Serial.print(" ");
+            Serial.print(cntk[v]);Serial.print(" ");Serial.print(totalMem[v]);
+            Serial.print(")");
+            //for(uint8_t j=0;j<NBCNTMEM;j++){Serial.print(cntMem[v*NBCNTMEM+j]);Serial.print(",");}
         }
         Serial.println();
     }
+*/    
 }
 
 void Capat::count()
@@ -154,35 +177,37 @@ if(DIRECT_READ(rReg[0], rBit[0])){cntk[0]++;rt=true;}
 void Capat::meanUpdate()
 {
     for(uint8_t i=0;i<keyNb;i++){
-    
+
         if(millis()-debounce[i]>DEBOUNCE){      // no update if debounce running
-            uint8_t*  prev=&prevCntMem[i];
+            //uint8_t*  prev=&prevCntMem[i];
             uint32_t* total=&totalMem[i];
             uint16_t* mean=&meank[i];
             uint16_t* lowT=&lowTresh[i];
             uint16_t* highT=&highTresh[i];
-            uint16_t* cnt=&cntk[i];
+            uint16_t  cnta=cntk[i];
+            uint16_t* cnt=&cnta;
             bool*     val=&keyVal[i];
-            bool*     chg=&keyChge[i];    
-            uint16_t newCnt=abs(*mean-*cnt)/10+*mean;
+            bool*     chg=&keyChge[i];
 
-            if(*cnt<=*lowT+*mean){                  // no update when ON (but mean=0x8fff forcing at start)
-                (*prev)++;
-                (*prev)&=(NBCNTMEM-1);
-                *total-=cntMem[NBCNTMEM*i+*prev];
-                *total+=*cnt;
-                cntMem[NBCNTMEM*i+*prev]=*cnt;
+            if(*cnt<=*lowT/2+*mean){                  // no update when ON (but mean=0x8fff forcing at start)
+                //(*prev)++;
+                //(*prev)&=(NBCNTMEM-1);
+                //*total-=cntMem[NBCNTMEM*i+*prev];
+                if(millis()-keyChSt[i]>CHGSTROBE){    // protect from near untouching finger
+                    *total-=*mean;
+                    *total+=*cnt;
+                }
+                //cntMem[NBCNTMEM*i+*prev]=*cnt;
                 *mean=*total/NBCNTMEM;
                 
                 *lowT=*mean/10;                     // low treshold = mean+1/8
-                *highT=*lowT+*lowT/2;               // high treshold = mean+1/4
+                *highT=*lowT+*lowT/4;               // high treshold = mean+1/4
             }
             *chg=false;
             if(*cnt<*mean){*cnt=*mean;}
-            if((*cnt-*mean)>highTresh[i]){if(*val!=true){*chg=true;debounce[i]=millis();}*val=true;}
-            else if((*cnt-*mean)<lowTresh[i]){if(*val!=false){*chg=true;debounce[i]=millis();}*val=false;}
+            if((*cnt-*mean)>highTresh[i]){if(*val!=true){*chg=true;debounce[i]=millis();keyChSt[i]=millis();}*val=true;}
+            else if((*cnt-*mean)<lowTresh[i]){if(*val!=false){*chg=true;debounce[i]=millis();keyChSt[i]=millis();}*val=false;}
             // else nomansland ->no change
-            
         }
     }
 }    
