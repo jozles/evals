@@ -14,6 +14,40 @@
 #define DIRECT_WRITE_HIGH(base, mask)   ((*((base)+2)) |= (mask))
 #endif
 
+#if defined(__SAM3X8E__)
+#define PIN_TO_BASEREG(pin)             (&(digitalPinToPort(pin)->PIO_PER))
+#define PIN_TO_BITMASK(pin)             (digitalPinToBitMask(pin))
+#define IO_REG_TYPE uint32_t
+#define IO_REG_ASM
+#define DIRECT_READ(base, mask)         (((*((base)+15)) & (mask)) ? 1 : 0)
+#define DIRECT_MODE_INPUT(base, mask)   ((*((base)+5)) = (mask))
+#define DIRECT_MODE_OUTPUT(base, mask)  ((*((base)+4)) = (mask))
+#define DIRECT_WRITE_LOW(base, mask)    ((*((base)+13)) = (mask))
+#define DIRECT_WRITE_HIGH(base, mask)   ((*((base)+12)) = (mask))
+#endif
+
+#if defined(ARDUINO_ARCH_ESP8266)
+#define PIN_TO_BASEREG(pin) ((volatile uint32_t*) GPO)
+#define PIN_TO_BITMASK(pin) (1 << pin)
+#define IO_REG_TYPE uint32_t
+#define IO_REG_ASM
+#define DIRECT_READ(base, mask) ((GPI & (mask)) ? 1 : 0) //GPIO_IN_ADDRESS
+#define DIRECT_MODE_INPUT(base, mask) (GPE &= ~(mask)) //GPIO_ENABLE_W1TC_ADDRESS
+#define DIRECT_MODE_OUTPUT(base, mask) (GPE |= (mask)) //GPIO_ENABLE_W1TS_ADDRESS
+#define DIRECT_WRITE_LOW(base, mask) (GPOC = (mask)) //GPIO_OUT_W1TC_ADDRESS
+#define DIRECT_WRITE_HIGH(base, mask) (GPOS = (mask)) //GPIO_OUT_W1TS_ADDRESS
+#endif
+
+#if defined(ARDUINO_ARCH_ESP32)
+#include <driver/rtc_io.h>
+#define PIN_TO_BASEREG(pin)             (0)
+#define PIN_TO_BITMASK(pin)             (pin)
+#define IO_REG_TYPE uint32_t
+#define IO_REG_BASE_ATTR
+#define IO_REG_MASK_ATTR
+#endif
+
+
 #define MAXKEY 2                // greater or equal to cntNb !!
 #define NBCNTMEM 0x0fff         // 16     // puissance de 2 !!
 #define CALIB 16                // NBCNTMEM  // nbre de count() en calibration
