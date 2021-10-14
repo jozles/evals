@@ -5,7 +5,7 @@
 
 #if defined(__AVR__)
 #define PIN_TO_BASEREG(pin)             (portInputRegister(digitalPinToPort(pin)))
-#define PIN_TO_BITMASk(pin)             (digitalPinToBitMask(pin))
+#define PIN_TO_BITMASK(pin)             (digitalPinToBitMask(pin))
 #define IO_REG_TYPE uint8_t
 #define DIRECT_READ(base, mask)         (((*(base)) & (mask)) ? 1 : 0)
 #define DIRECT_MODE_INPUT(base, mask)   ((*((base)+1)) &= ~(mask), (*((base)+2)) &= ~(mask))
@@ -32,10 +32,10 @@
 #define IO_REG_TYPE uint32_t
 #define IO_REG_ASM
 #define DIRECT_READ(base, mask) ((GPI & (mask)) ? 1 : 0) //GPIO_IN_ADDRESS
-#define DIRECT_MODE_INPUT(base, mask) (GPE &= ~(mask)) //GPIO_ENABLE_W1TC_ADDRESS
-#define DIRECT_MODE_OUTPUT(base, mask) (GPE |= (mask)) //GPIO_ENABLE_W1TS_ADDRESS
-#define DIRECT_WRITE_LOW(base, mask) (GPOC = (mask)) //GPIO_OUT_W1TC_ADDRESS
-#define DIRECT_WRITE_HIGH(base, mask) (GPOS = (mask)) //GPIO_OUT_W1TS_ADDRESS
+#define DIRECT_MODE_INPUT(base, mask) (GPEC |= (mask)) //(GPE&= ~(mask)) //GPIO_ENABLE_W1TC_ADDRESS
+#define DIRECT_MODE_OUTPUT(base, mask) (GPES |= (mask)) //(GPE |= (mask)) //GPIO_ENABLE_W1TS_ADDRESS
+#define DIRECT_WRITE_LOW(base, mask) (GPOC |= (mask)) //(GPOC = (mask)) //GPIO_OUT_W1TC_ADDRESS
+#define DIRECT_WRITE_HIGH(base, mask) (GPOS |= (mask)) //(GPOS = (mask)) //GPIO_OUT_W1TS_ADDRESS
 #endif
 
 #if defined(ARDUINO_ARCH_ESP32)
@@ -53,6 +53,7 @@
 #define CALIB 16                // NBCNTMEM  // nbre de count() en calibration
 #define DEBOUNCE 60
 #define CHGSTROBE 0xffff        // millis() strobe mean's update to protect from near finger
+#define MAXCOUNT  0x0FFF
 
 class Capat{
     public:
@@ -60,6 +61,7 @@ class Capat{
         void init(uint8_t samples,uint8_t common,uint8_t* touch,uint8_t cntNb);
         void calibrate();
         void count();
+        void esp_count();
         void capaKeysCheck();
         uint8_t capaKeysGet(uint8_t keyNum);
 
@@ -71,6 +73,9 @@ class Capat{
         bool     keyVal[MAXKEY];                    // off/on
         bool     keyChge[MAXKEY];                   // last update key change
         uint32_t keyChSt[MAXKEY];                   // key change time
+
+        uint8_t  ktouch[MAXKEY];                    // pins values
+        uint8_t  kcommon;                           // common pin value
 
     private:
         void     meanUpdate();
@@ -84,10 +89,13 @@ class Capat{
         
         IO_REG_TYPE	sBit;
         volatile IO_REG_TYPE *sReg; 
+        //uint32_t sBit;
+        //uint32_t* sReg;
 
         IO_REG_TYPE	rBit[MAXKEY];
         volatile IO_REG_TYPE* rReg[MAXKEY];
-        
+        //uint32_t rBit;
+        //uint32_t* rReg;        
 };
 
 #endif // DS18X20_H_INCLUDED

@@ -18,20 +18,19 @@ Capat::Capat(){}
 void Capat::init(uint8_t samp,uint8_t common,uint8_t* touch,uint8_t touchNb)
 {
     samples=samp;
-    sBit = PIN_TO_BITMASk(common);
+    sBit = PIN_TO_BITMASK(common);
     sReg = PIN_TO_BASEREG(common);
     
-    rBit1= PIN_TO_BITMASk(touch[0]);
-    rReg1 = PIN_TO_BASEREG(touch[0]);
-    
+    kcommon=common;
     keyNb = touchNb;
     Serial.print(common);Serial.print(" k=");Serial.print(touchNb);Serial.print(" ");delay(1000);
     for(uint8_t i=0;i<keyNb;i++){
-        rBit[i] = PIN_TO_BITMASk(touch[i]);
+        ktouch[i]=touch[i];
+        rBit[i] = PIN_TO_BITMASK(touch[i]);
         rReg[i] = PIN_TO_BASEREG(touch[i]);
-    Serial.print(touch[i]);if(i<keyNb-1){Serial.print(";");}
+    Serial.print(ktouch[i]);Serial.print("/");Serial.print(rBit[i]);if(i<keyNb-1){Serial.print(";");}
     }
-    Serial.println();
+    Serial.println();delay(1000);
 }
 
 void Capat::calibrate()
@@ -42,9 +41,12 @@ void Capat::calibrate()
 
     uint16_t maxCount[MAXKEY];
     memset(maxCount,0x00,(uint32_t)MAXKEY*sizeof(uint16_t));
-    Serial.print("s=");Serial.println((uint16_t)sizeof(uint16_t));
     for(uint8_t i=0;i<CALIB;i++){
+#if defined(ARDUINO_ARCH_ESP8266)    
+        esp_count();
+#else   
         count();
+#endif    
         Serial.print(i);
         for(uint8_t k=0;k<keyNb;k++){
             if(cntk[k]>maxCount[k]){maxCount[k]=cntk[k];}
@@ -84,6 +86,26 @@ void Capat::calibrate()
         Serial.println();
     }
 */    
+}
+
+void Capat::esp_count()
+{
+    memset(cntk,0x00,sizeof(uint16_t)*MAXKEY);
+    pinMode(kcommon,OUTPUT);
+    pinMode(ktouch[0],INPUT);
+
+    for(uint8_t s=0;s<samples;s++){
+
+        digitalWrite(kcommon,LOW);
+        delayMicroseconds(50);
+        digitalWrite(kcommon,HIGH);
+        noInterrupts();
+        while(
+            (GPI & rBit[0]) !=0
+            //digitalRead(ktouch[0]) 
+            && cntk[0]<MAXCOUNT){cntk[0]++;}  // le trigger inverse
+        interrupts();
+    }
 }
 
 void Capat::count()
@@ -129,7 +151,10 @@ DIRECT_MODE_INPUT(rReg[0], rBit[0]);
                 if(!rn[i]){cntk[i]++;rn[i]=DIRECT_READ(rReg[i], rBit[i]);rt&=rn[i];}
             }
 */            
-if(!DIRECT_READ(rReg[0], rBit[0])){cntk[0]++;rt=false;}
+if(
+    digitalRead(ktouch[0])
+    //!DIRECT_READ(rReg[0], rBit[0]) 
+    && cntk[0]<MAXCOUNT){cntk[0]++;rt=false;}
         }
     
         interrupts();
@@ -165,13 +190,17 @@ DIRECT_MODE_INPUT(rReg[0], rBit[0]);    // receive input (capacitor is empty)
                 if(rn[i]){cntk[i]++;rn[i]=DIRECT_READ(rReg[i], rBit[i]);rt|=rn[i];}
             }
 */            
-if(DIRECT_READ(rReg[0], rBit[0])){cntk[0]++;rt=true;}
+if(
+    digitalRead(ktouch[0])
+    //DIRECT_READ(rReg[0], rBit[0])
+    && cntk[0]<MAXCOUNT){cntk[0]++;rt=true;}
         }
 /*        for(uint8_t p=0;p<keyNb;p++){Serial.print(cntk[p]);Serial.print(":");}
         Serial.println();
 */
         interrupts();
     }
+
 }
 
 void Capat::meanUpdate()
@@ -214,7 +243,12 @@ void Capat::meanUpdate()
 
 void Capat::capaKeysCheck()
 {
+#if defined(ARDUINO_ARCH_ESP8266)
+    esp_count();
+#else 
     count();
+#endif    
+
     meanUpdate();
 }
 
