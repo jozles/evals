@@ -90,6 +90,7 @@ void Capat::calibrate()
 
 void Capat::esp_count()
 {
+    /*
     memset(cntk,0x00,sizeof(uint16_t)*MAXKEY);
     pinMode(kcommon,OUTPUT);
     pinMode(ktouch[0],INPUT);
@@ -104,6 +105,16 @@ void Capat::esp_count()
             (GPI & rBit[0]) !=0
             //digitalRead(ktouch[0]) 
             && cntk[0]<MAXCOUNT){cntk[0]++;}  // le trigger inverse
+        interrupts();
+    }
+    */
+    memset(cntk,0x00,sizeof(uint16_t)*MAXKEY);
+    pinMode(ktouch[0],INPUT);
+
+    for(uint8_t s=0;s<samples;s++){
+        noInterrupts();
+        while((GPI & rBit[0]) ==0){}
+        while((GPI & rBit[0]) !=0){cntk[0]++;}
         interrupts();
     }
 }

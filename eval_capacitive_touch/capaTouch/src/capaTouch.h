@@ -77,6 +77,12 @@ class Capat{
         uint8_t  ktouch[MAXKEY];                    // pins values
         uint8_t  kcommon;                           // common pin value
 
+        IO_REG_TYPE	rBit[MAXKEY];
+        volatile IO_REG_TYPE* rReg[MAXKEY];
+        //uint32_t rBit;
+        //uint32_t* rReg;        
+
+
     private:
         void     meanUpdate();
 
@@ -92,10 +98,6 @@ class Capat{
         //uint32_t sBit;
         //uint32_t* sReg;
 
-        IO_REG_TYPE	rBit[MAXKEY];
-        volatile IO_REG_TYPE* rReg[MAXKEY];
-        //uint32_t rBit;
-        //uint32_t* rReg;        
 };
 
 #endif // DS18X20_H_INCLUDED

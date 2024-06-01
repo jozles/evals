@@ -64,7 +64,7 @@ void setup()
     
     //while(1){capaKeys.esp_count();Serial.println(capaKeys.cntk[0]);delay(50);}
     
-    capaKeys.calibrate();
+    //capaKeys.calibrate();
 }
 
 void loop()                    
@@ -72,9 +72,86 @@ void loop()
     delay(100);
     unsigned long beg=micros(); 
 
-    capaKeys.capaKeysCheck();
+    //capaKeys.capaKeysCheck();
 
     unsigned long end=micros()-beg;
+
+    pinMode(capaKeys.ktouch[0],INPUT);
+    pinMode(13,INPUT);
+    uint16_t rB=capaKeys.rBit[1];
+    Serial.print("\n(rb=");Serial.print(rB,BIN);Serial.println(')');
+
+    uint16_t a;
+    unsigned long t1=micros(),t2;
+
+noInterrupts();
+
+#define NBL 100
+    for(uint8_t i=0;i<NBL;i++){
+        a=GPI&rB;
+    }
+
+    t2=micros();
+    Serial.print(NBL);Serial.print(" fois a=GPI&rB ");
+    Serial.print("\na=");Serial.print(a,BIN);Serial.print(" t=");Serial.print(t2-t1);Serial.println("uS");
+
+    uint16_t l1=0,l2=0,h1=0,h2=0;
+
+    t1=micros();
+    //ll1: if((GPI&rB) == 0){l1++;goto ll1;} 
+    //while((GPI&rB) == 0){l1++;}
+    for(uint16_t i=0;i<MAXCOUNT;i++){           // attente low
+        if((GPI&rB) == 0){break;}
+        l1++;
+    }
+    //hh1: if((GPI&rB) != 0){h1++;goto hh1;} 
+    //while((GPI&rB) != 0){h1++;}
+    for(uint16_t i=0;i<MAXCOUNT;i++){           // attente high 
+        if((GPI&rB) != 0){break;}
+        h1++;
+    }
+    //ll2: if((GPI&rB) == 0){l2++;goto ll2;} 
+    //while((GPI&rB) == 0){l2++;}
+    for(uint16_t i=0;i<MAXCOUNT;i++){           // attente low  (high est mesuré dans l2)
+        if((GPI&rB) == 0){break;}
+        l2++;
+    }
+    //hh2: if((GPI&rB) != 0){h2++;goto hh2;} 
+    //while((GPI&rB) != 0){h2++;}
+    for(uint16_t i=0;i<MAXCOUNT;i++){           // attente high  (low est mesuré dans h2)
+        if((GPI&rB) != 0){break;}
+        h2++;
+    }
+    t2=micros();
+    
+    Serial.println(" 4 fois (l1,l2,h1,h2) while((GPI&rB) == 0){xy++;} ");
+
+    //Serial.print("\n rB=");Serial.println(capaKeys.rBit[0],BIN);
+    Serial.print("\n l1=");Serial.print(l1);Serial.print(" h1=");Serial.print(h1);
+    Serial.print("\n l2=");Serial.print(l2);Serial.print(" h2=");Serial.print(h2);
+    Serial.print("\n t=");Serial.print(t2-t1);Serial.println("uS");
+    
+    #define NBSPL 500
+    uint32_t b[NBSPL];memset(b,0x00,NBSPL*sizeof(uint32_t));
+    for(uint16_t i=0;i<NBSPL;i++){
+        b[i]=GPI; //&capaKeys.rBit[0];
+    }
+    
+    #define FRA 4
+    for(uint16_t i=0;i<NBSPL/FRA;i++){
+        for(uint8_t j=0;j<FRA;j++){
+            Serial.print(b[i*FRA+j],BIN);Serial.print(" ");
+        }
+        Serial.println();
+    }
+
+    interrupts();
+    while(1){delay(1);}
+
+    
+
+    t2=micros();
+    Serial.print("\na=");Serial.print(a,BIN);Serial.print(" t=");Serial.println(t2-t1);while(1){delay(1);}
 
     for(uint8_t i=0;i<2;i++){
         capaKeys.capaKeysGet(i);
