@@ -1,12 +1,12 @@
 #include <SPI.h>
 #include <LoRa.h> 
-int LED = 3;
+int led = 4;
 String inString = "";    // string to hold input
 int val = 0;
  
 void setup() {
   Serial.begin(115200);
-  pinMode(LED,OUTPUT);
+  pinMode(led,OUTPUT);
   
   while (!Serial);
   Serial.println("LoRa Receiver");
@@ -33,5 +33,5 @@ void loop() {
   }
       
   Serial.println(val);  
-  analogWrite(LED, val);
+  analogWrite(led, val);
 }
