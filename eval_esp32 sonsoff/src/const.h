@@ -10,7 +10,7 @@
 // !!!!! seul l'analyseur doit y être raccordé dans ce cas !!!!!
 
 
-#define VERSION "2.9_"
+#define VERSION "2.a_"
 /* 1.1 allumage/extinction modem
  * 1.2 ajout voltage (n.nn) dans message ; modif unpackMac
  * 1.3 deep sleep (PERTEMP) ; gestion EEPROM ; conversion temp pendant sleep
@@ -99,6 +99,7 @@
  *     gestion thermostat en local via locmem et LOCMEM_STA_BIT
  * 2.8 login/password mail dans fonction mail______
  * 2.9 ajout messageCnt dans le message au serveur
+ * 2.a sonoff POWR ajouté (sans CS7733)
  *
 Modifier :
 
@@ -425,7 +426,7 @@ Modifier :
 #endif // CARTE==SFRFR2
 
 #if CARTE==SFPOW
-// ------------------------ configurer platformio.ini pour 8285 -----------------------------
+// ------------------------ configurer platformio.ini pour ESP32 -----------------------------
 #define PINLED 5
 #define LEDON LOW
 #define LEDOFF HIGH

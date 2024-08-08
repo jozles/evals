@@ -41,8 +41,8 @@ Serial.println("\n--- end setup");
 }
 
 void loop() {
-  blink(1000,50,100,2);
+  blink(2000,50,100,2);
   digitalWrite(PINSWA,CLOSA);
-  blink(1000,50,100,4);
+  blink(2000,50,100,4);
   digitalWrite(PINSWA,OPENA);
 }
