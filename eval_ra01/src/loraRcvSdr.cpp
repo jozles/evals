@@ -30,17 +30,24 @@ uint32_t loopCnt=0;
 void blink(uint8_t num)
 {
   if(num!=0){
-    for(uint8_t i=0;i<num;i++){digitalWrite(led,HIGH);delay(20);digitalWrite(led,LOW);delay(300);}
+    for(uint8_t i=0;i<num;i++){digitalWrite(led,HIGH);delay(20);digitalWrite(led,LOW);delay(800);}
   }
 }
 
 void setup() {
-  
+
 #ifdef SENDER
   pinMode(pot,INPUT);
 #endif
 
   pinMode(led,OUTPUT);
+  digitalWrite(led,HIGH);
+  delay(3000);
+  digitalWrite(led,LOW);
+  delay(1000);
+  blink(3);
+  delay(3000);
+
 
   digitalWrite(PWR,HIGH);   // power off
   pinMode(PWR,OUTPUT);      // power off
@@ -55,7 +62,8 @@ void setup() {
     while (1){blink(1); delay(500);};
   }
   Serial.println(" ok");
-  blink(3);
+  
+  
 }
 
 void loop()

@@ -1,3 +1,3 @@
-//#define SENDER
+#define SENDER
 
-#define RCVR
+//#define RCVR
