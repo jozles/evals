@@ -6,11 +6,6 @@
 
 uint8_t led = LED;
 
-unsigned long t1=0;
-unsigned long t2=0;
-unsigned long t3=0;
-unsigned long t4=0;
-
 uint16_t volts=0;
 uint16_t amps=0;
 
@@ -27,10 +22,10 @@ void blink(uint8_t num)
 
 void spi_Write(byte* data,uint8_t port,uint8_t pin)
 {
-    bitClear(port,pin);
+    bitClear(PORT_CS,pin);
     SPI.transfer(*data);
     SPI.transfer(*(data+1));
-    bitSet(port,pin);
+    bitSet(PORT_CS,pin);
 }
 char getCh()
 {
