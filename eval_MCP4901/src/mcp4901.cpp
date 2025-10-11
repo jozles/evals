@@ -12,6 +12,7 @@ unsigned long t3=0;
 unsigned long t4=0;
 
 uint16_t volts=0;
+uint16_t amps=0;
 
 uint8_t vbuf=0;   // 1 buffered ; 0 unbuffered
 uint8_t vga=1;    // 1 gain 1 ; 0 gain 2
@@ -24,14 +25,12 @@ void blink(uint8_t num)
   }
 }
 
-void spi_Write(byte* data)
+void spi_Write(byte* data,uint8_t port,uint8_t pin)
 {
-    CSN_LOW
-    bitClear(PORT_CSN,CSN_PIN);
+    bitClear(port,pin);
     SPI.transfer(*data);
     SPI.transfer(*(data+1));
-    bitSet(PORT_CSN,CSN_PIN);
-    //CSN_HIGH
+    bitSet(port,pin);
 }
 char getCh()
 {
@@ -39,16 +38,29 @@ char getCh()
   return Serial.read();
 }
 
-uint16_t getVolts()
+void getValue(const char* type,uint16_t* v)
 {
-  uint16_t v=0;
+  *v=0;
   char c='\0';
-  while(c!='V'){c=getCh();Serial.print(c);}
+  while(c!=*type){c=getCh();Serial.print(c);}
 
   while(c!=0x1b){
     while((c<'0' || c>'9') && c!=0x1b){c=getCh();}
-    if(c!=0x1b){Serial.print(c);c-='0';v*=10;v+=c;}
+    if(c!=0x1b){Serial.print(c);c-='0';*v*=10;*v+=c;}
   }
+}
+
+uint16_t getVolts()
+{
+  uint16_t v=0;
+  getValue((const char*)"V",&v);
+  return v;
+}
+
+uint16_t getAmps()
+{
+  uint16_t v=0;
+  getValue((const char*)"A",&v);
   return v;
 }
 
@@ -60,7 +72,18 @@ void outVolts( uint16_t val)
   
   value[0] |= (vbuf<<(BUF-8)) | (vga<<(GA-8)) | (vshdn<<(SHDN-8)) ;
 
-  spi_Write(value);
+  spi_Write(value,PORT_CSV,CSV_PIN);
+}
+
+void outAmps( uint16_t val)
+{
+  byte value[2];
+  value[0]=val>>8;
+  value[1]=val&0xff;
+  
+  value[0] |= (vbuf<<(BUF-8)) | (vga<<(GA-8)) | (vshdn<<(SHDN-8)) ;
+
+  spi_Write(value,PORT_CSA,CSA_PIN);
 }
 
 void setup() {
@@ -72,9 +95,10 @@ void setup() {
 
   delay(100);
 
-  CE_INIT
-  CSN_INIT
-  CSN_HIGH
+  CSA_INIT
+  CSV_INIT
+  CSV_HIGH
+  CSA_HIGH
   SPI_START
   SPI_INIT
   
@@ -92,6 +116,11 @@ void loop()
 
   Serial.print("\nvolts ? ");
   volts=getVolts();
+  
+  Serial.print("\namps ? ");
+  amps=getAmps();
+
+  outAmps(amps);
   outVolts(volts);
 }
 
