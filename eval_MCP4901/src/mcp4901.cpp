@@ -33,7 +33,7 @@ char getCh()
   return Serial.read();
 }
 
-void getValue(const char* type,uint16_t* v)
+void getValSpec(const char* type,uint16_t* v)
 {
   *v=0;
   char c='\0';
@@ -45,17 +45,28 @@ void getValue(const char* type,uint16_t* v)
   }
 }
 
+uint16_t getValue()
+{
+  uint16_t v=0;
+  char c='\0';
+  while(c!=0x1b){
+    while((c<'0' || c>'9') && c!=0x1b){c=getCh();}
+    if(c!=0x1b){Serial.print(c);c-='0';v*=10;v+=c;}
+  }
+  return v;
+}
+
 uint16_t getVolts()
 {
   uint16_t v=0;
-  getValue((const char*)"V",&v);
+  getValSpec((const char*)"V",&v);
   return v;
 }
 
 uint16_t getAmps()
 {
   uint16_t v=0;
-  getValue((const char*)"A",&v);
+  getValSpec((const char*)"A",&v);
   return v;
 }
 
@@ -109,13 +120,64 @@ void loop()
   blink(2);
   delay(1000);
 
-  Serial.print("\nvolts ? ");
-  volts=getVolts();
-  
-  Serial.print("\namps ? ");
-  amps=getAmps();
+  Serial.print("\n\nquoi (Fixe/Rampe)?");
 
-  outAmps(amps);
-  outVolts(volts);
+  char quoi='\0';
+  quoi=getCh();Serial.println(quoi);
+
+  switch(quoi){
+    
+    case 'F':
+      Serial.print("\nvolts ? ");
+      volts=getValue();
+  
+      Serial.print("\namps ? ");
+      amps=getValue();
+
+      outAmps(amps);
+      outVolts(volts);
+    break;
+
+    case 'R':
+    {
+      uint16_t voltsB=0,voltsE=0,stepsN=0,dly=0;
+      int16_t step=0;
+
+      Serial.print("\ndurée step ?");
+      dly=getValue();
+      Serial.print("\namps maxi ?");
+      amps=getValue();
+      Serial.print("\nvolts beg ? ");
+      voltsB=getValue();
+      Serial.print("\nvolts end ? ");
+      voltsE=getValue();
+      Serial.print("\nnbre steps ? ");
+      stepsN=getValue();
+
+      Serial.println();
+      
+      if(stepsN==0){break;}
+      else {
+        if(voltsB<voltsE){step=(voltsE-voltsB)/stepsN;}
+        else {step=-((voltsB-voltsE)/stepsN);}
+        
+        Serial.print("step=");Serial.println(step);
+        
+        outAmps(amps);
+        volts=voltsB;
+        for(uint8_t i=0;i<stepsN;i++){
+          volts+=step;
+          outVolts(volts);delay(dly);
+          Serial.print(volts);Serial.print(' ');
+        }
+      }
+    }
+    break;
+
+    default:
+    break;
+
+  }
+
 }
 
