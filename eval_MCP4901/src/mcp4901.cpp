@@ -7,7 +7,11 @@
 uint8_t led = LED;
 
 uint16_t volts=0;
+uint16_t vAdj=14;
+uint16_t aAdj=0;
 uint16_t amps=0;
+
+uint16_t voltsB,voltsE,ampsB,ampsE,stepsN,dly;
 
 uint8_t vbuf=0;   // 1 buffered ; 0 unbuffered
 uint8_t vga=1;    // 1 gain 1 ; 0 gain 2
@@ -73,6 +77,7 @@ uint16_t getAmps()
 void outVolts( uint16_t val)
 {
   byte value[2];
+  val+=vAdj;
   value[0]=val>>8;
   value[1]=val&0xff;
   
@@ -84,12 +89,35 @@ void outVolts( uint16_t val)
 void outAmps( uint16_t val)
 {
   byte value[2];
+  val+=aAdj;
   value[0]=val>>8;
   value[1]=val&0xff;
   
   value[0] |= (vbuf<<(BUF-8)) | (vga<<(GA-8)) | (vshdn<<(SHDN-8)) ;
 
   spi_Write(value,PORT_CSA,CSA_PIN);
+}
+
+void ramp(char what,uint16_t valB,uint16_t valE,uint16_t stepsN,uint32_t dly)
+{
+  int16_t step=0;
+
+  if(valB<valE){step=(valE-valB)/stepsN;}
+        else {step=-((valB-valE)/stepsN);}
+        
+        Serial.print(" valB=");Serial.print(valB);
+        Serial.print(" valE=");Serial.print(valE);
+        Serial.print(" step=");Serial.println(step);
+        
+        outAmps(amps);
+        uint16_t val=valB;
+        for(uint8_t i=0;i<=stepsN;i++){
+          Serial.print(val);Serial.print(' ');
+          if(what=='V'){outVolts(val);}
+          else {outAmps(val);}
+          delay(dly);
+          val+=step;
+        }
 }
 
 void setup() {
@@ -108,11 +136,19 @@ void setup() {
   SPI_START
   SPI_INIT
   
-  uint16_t val=0x07FF; //0x0db0;      //x0ffe;
-
+  uint16_t val=0; //0x0db0;      //x0ffe;
   outVolts(val);
 
+  Serial.print("(");Serial.print(vAdj);
+  Serial.print(") aAdj Volts ? ");
+  vAdj=getValue();
+
+  Serial.print("  (");Serial.print(aAdj);
+  Serial.print(") Adj Amps ? ");
+  aAdj=getValue();
+
   Serial.println(" ok");
+
 }
 
 void loop()
@@ -120,7 +156,7 @@ void loop()
   blink(2);
   delay(1000);
 
-  Serial.print("\n\nquoi (Fixe/Rampe)?");
+  Serial.print("\n\nquoi (F fixe / Vv rampe V / Aa rampe A)?");
 
   char quoi='\0';
   quoi=getCh();Serial.println(quoi);
@@ -138,10 +174,9 @@ void loop()
       outVolts(volts);
     break;
 
-    case 'R':
+    case 'V':
     {
-      uint16_t voltsB=0,voltsE=0,stepsN=0,dly=0;
-      int16_t step=0;
+      voltsB=0;voltsE=0;stepsN=0;dly=0;
 
       Serial.print("\ndurée step ?");
       dly=getValue();
@@ -158,20 +193,41 @@ void loop()
       
       if(stepsN==0){break;}
       else {
-        if(voltsB<voltsE){step=(voltsE-voltsB)/stepsN;}
-        else {step=-((voltsB-voltsE)/stepsN);}
-        
-        Serial.print("step=");Serial.println(step);
-        
-        outAmps(amps);
-        volts=voltsB;
-        for(uint8_t i=0;i<stepsN;i++){
-          volts+=step;
-          outVolts(volts);delay(dly);
-          Serial.print(volts);Serial.print(' ');
-        }
+       ramp('V',voltsB,voltsE,stepsN,dly);
       }
     }
+    break;
+
+    case 'v':
+      ramp('V',voltsB,voltsE,stepsN,dly);
+    break;
+
+   case 'A':
+    {
+      ampsB=0;ampsE=0;stepsN=0;dly=0;
+
+      Serial.print("\ndurée step ?");
+      dly=getValue();
+      Serial.print("\nvolts ?");
+      volts=getValue();
+      Serial.print("\namps beg ? ");
+      ampsB=getValue();
+      Serial.print("\nvamps end ? ");
+      ampsE=getValue();
+      Serial.print("\nnbre steps ? ");
+      stepsN=getValue();
+
+      Serial.println();
+      
+      if(stepsN==0){break;}
+      else {
+       ramp('A',ampsB,ampsE,stepsN,dly);
+      }
+    }
+    break;
+
+    case 'a':
+      ramp('A',ampsB,ampsE,stepsN,dly);
     break;
 
     default:
