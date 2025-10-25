@@ -8,7 +8,9 @@ uint8_t led = LED;
 
 uint16_t volts=0;
 uint16_t vAdj=14;
+float vFactor=2004;
 uint16_t aAdj=0;
+uint16_t aFactor=1;
 uint16_t amps=0;
 
 uint16_t voltsB,voltsE,ampsB,ampsE,stepsN,dly;
@@ -56,6 +58,32 @@ uint16_t getValue()
   while(c!=0x1b){
     while((c<'0' || c>'9') && c!=0x1b){c=getCh();}
     if(c!=0x1b){Serial.print(c);c-='0';v*=10;v+=c;}
+  }
+  return v;
+}
+
+float getFloatValue()
+{
+  float v=0;
+  char c='\0';
+  uint8_t decimal=0;
+  while(c!=0x1b){
+    while(((c<'0' || c>'9') && c!='.') && c!=0x1b){c=getCh();}
+    if(c!=0x1b){
+      if(c=='.'){decimal=1;}
+      else {
+        Serial.print(c);
+        c-='0';
+        if(decimal==0){
+          v*=10;v+=c;
+        } else {
+          float d=0.1;
+          for(uint8_t i=0;i<decimal;i++){d*=0.1;}
+          v+=c*d;
+          decimal++;
+        }
+      }
+    }
   }
   return v;
 }
@@ -155,8 +183,9 @@ void loop()
 {
   blink(2);
   delay(1000);
+  float bid;
 
-  Serial.print("\n\nquoi (F fixe / Vv rampe V / Aa rampe A)?");
+  Serial.print("\n\n\rquoi (F fixe / Vv rampe V / Aa rampe A)?");
 
   char quoi='\0';
   quoi=getCh();Serial.println(quoi);
@@ -164,12 +193,18 @@ void loop()
   switch(quoi){
     
     case 'F':
-      Serial.print("\nvolts ? ");
-      volts=getValue();
-  
-      Serial.print("\namps ? ");
-      amps=getValue();
+      Serial.print("\nVolts ? ");
+      bid=getFloatValue();
+      Serial.print("  ");Serial.print(bid);
+      volts=(uint16_t)(bid*vFactor);
 
+      //Serial.print("  ");Serial.print(bid*1000/vFactor);
+      //volts=(uint16_t)(getFloatValue()*1000*vFactor);
+      Serial.print(" ->");Serial.print(volts);
+      Serial.print("\n\rmAmps ? ");
+      amps=getValue();
+      
+      
       outAmps(amps);
       outVolts(volts);
     break;
