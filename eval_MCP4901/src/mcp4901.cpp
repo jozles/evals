@@ -39,6 +39,12 @@ char getCh()
   return Serial.read();
 }
 
+char peekCh()
+{
+  if(Serial.available()){return Serial.read();}
+  else {return '\0';}
+}
+
 void getValSpec(const char* type,uint16_t* v)
 {
   *v=0;
@@ -70,9 +76,10 @@ float getFloatValue()
   while(c!=0x1b){
     while(((c<'0' || c>'9') && c!='.') && c!=0x1b){c=getCh();}
     if(c!=0x1b){
-      if(c=='.'){decimal=1;}
+      Serial.print(c);
+      if(c=='.' && decimal==0){decimal=1;}
       else {
-        Serial.print(c);
+        //Serial.print(c);
         c-='0';
         if(decimal==0){
           v*=10;v+=c;
@@ -131,16 +138,15 @@ void ramp(char what,uint16_t valB,uint16_t valE,uint16_t stepsN,uint32_t dly)
   int16_t step=0;
 
   if(valB<valE){step=(valE-valB)/stepsN;}
-        else {step=-((valB-valE)/stepsN);}
-        
+  else {step=-((valB-valE)/stepsN);}
+      /*  
         Serial.print(" valB=");Serial.print(valB);
         Serial.print(" valE=");Serial.print(valE);
         Serial.print(" step=");Serial.println(step);
-        
-        outAmps(amps);
+      */ 
         uint16_t val=valB;
         for(uint8_t i=0;i<=stepsN;i++){
-          Serial.print(val);Serial.print(' ');
+          //Serial.print(val);Serial.print(' ');
           if(what=='V'){outVolts(val);}
           else {outAmps(val);}
           delay(dly);
@@ -218,17 +224,26 @@ void loop()
       Serial.print("\namps maxi ?");
       amps=getValue();
       Serial.print("\nvolts beg ? ");
-      voltsB=getValue();
+      bid=getFloatValue();
+      voltsB=(uint16_t)(bid*vFactor);
+      //voltsB=(uint16_t)(getFloatValue()*vFactor);
       Serial.print("\nvolts end ? ");
-      voltsE=getValue();
+      bid=getFloatValue();
+      voltsE=(uint16_t)(bid*vFactor);
       Serial.print("\nnbre steps ? ");
       stepsN=getValue();
 
       Serial.println();
       
       if(stepsN==0){break;}
-      else {
-       ramp('V',voltsB,voltsE,stepsN,dly);
+      else { 
+        outAmps(amps);
+        quoi='\0';      
+        while(quoi!=0x1b){
+          ramp('V',voltsB,voltsE,stepsN,dly);      
+          outVolts(0);delay(dly);
+          quoi=peekCh();
+        }
       }
     }
     break;
@@ -241,7 +256,7 @@ void loop()
     {
       ampsB=0;ampsE=0;stepsN=0;dly=0;
 
-      Serial.print("\ndurée step ?");
+      Serial.print("\ndurée step mS ?");
       dly=getValue();
       Serial.print("\nvolts ?");
       volts=getValue();
@@ -253,10 +268,17 @@ void loop()
       stepsN=getValue();
 
       Serial.println();
+
+      outAmps(ampsB);
+      outVolts(volts);
       
       if(stepsN==0){break;}
       else {
-       ramp('A',ampsB,ampsE,stepsN,dly);
+         while(quoi!=0x1b){
+          ramp('A',ampsB,ampsE,stepsN,dly);
+          outAmps(0);delay(dly);
+          quoi=peekCh();
+         }
       }
     }
     break;
