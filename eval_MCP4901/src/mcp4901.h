@@ -36,8 +36,9 @@
 #define CSV_HIGH  bitSet(PORT_CSV,CSV_PIN); //digitalWrite(CSV_PIN,HIGH);
 #define CSV_LOW   bitClear(PORT_CSV,CSV_PIN); //digitalWrite(CSV_PIN,LOW);
 
+#define SPI_SPEED 1000000 //4000000 // ADUM low power config
 
-#define SPI_INIT  SPI.beginTransaction(SPISettings(4000000,MSBFIRST,SPI_MODE0));
+#define SPI_INIT  SPI.beginTransaction(SPISettings(SPI_SPEED,MSBFIRST,SPI_MODE0));
 #define SPI_START SPI.begin();
 #define SPI_OFF   SPI.end();bitClear(DDR_MOSI,MOSI_PIN);bitClear(DDR_CLK,CLK_PIN); //digitalWrite(CSV_PIN,LOW);
 

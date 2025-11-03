@@ -8,9 +8,9 @@ uint8_t led = LED;
 
 uint16_t volts=0;
 uint16_t vAdj=14;
-float vFactor=2004;
+float vFactor=490;
 uint16_t aAdj=0;
-uint16_t aFactor=1;
+uint16_t aFactor=7.96;
 uint16_t amps=0;
 
 uint16_t voltsB,voltsE,ampsB,ampsE,stepsN,dly;
@@ -22,7 +22,7 @@ uint8_t vshdn=1;  // 1 active ; 0 shutdown
 void blink(uint8_t num)
 {
   if(num!=0){
-    for(uint8_t i=0;i<num;i++){digitalWrite(led,HIGH);delay(20);digitalWrite(led,LOW);delay(50);}
+    for(uint8_t i=0;i<num;i++){digitalWrite(led,HIGH);delay(10);digitalWrite(led,LOW);delay(10);}
   }
 }
 
@@ -45,7 +45,7 @@ char peekCh()
   else {return '\0';}
 }
 
-void getValSpec(const char* type,uint16_t* v)
+/*void getValSpec(const char* type,uint16_t* v)
 {
   *v=0;
   char c='\0';
@@ -55,7 +55,7 @@ void getValSpec(const char* type,uint16_t* v)
     while((c<'0' || c>'9') && c!=0x1b){c=getCh();}
     if(c!=0x1b){Serial.print(c);c-='0';*v*=10;*v+=c;}
   }
-}
+}*/
 
 uint16_t getValue()
 {
@@ -77,16 +77,19 @@ float getFloatValue()
     while(((c<'0' || c>'9') && c!='.') && c!=0x1b){c=getCh();}
     if(c!=0x1b){
       Serial.print(c);
-      if(c=='.' && decimal==0){decimal=1;}
+      if(c=='.' && decimal==0){decimal=1;c='\0';}
       else {
         //Serial.print(c);
         c-='0';
         if(decimal==0){
           v*=10;v+=c;
         } else {
-          float d=0.1;
+          /*float d=0.1;
           for(uint8_t i=0;i<decimal;i++){d*=0.1;}
-          v+=c*d;
+          v+=c*d;*/
+          float v1=c;
+          for(uint8_t i=0;i<decimal;i++){v1*=0.1;}
+          v+=v1;
           decimal++;
         }
       }
@@ -95,7 +98,7 @@ float getFloatValue()
   return v;
 }
 
-uint16_t getVolts()
+/*uint16_t getVolts()
 {
   uint16_t v=0;
   getValSpec((const char*)"V",&v);
@@ -107,7 +110,7 @@ uint16_t getAmps()
   uint16_t v=0;
   getValSpec((const char*)"A",&v);
   return v;
-}
+}*/
 
 void outVolts( uint16_t val)
 {
@@ -149,7 +152,8 @@ void ramp(char what,uint16_t valB,uint16_t valE,uint16_t stepsN,uint32_t dly)
           //Serial.print(val);Serial.print(' ');
           if(what=='V'){outVolts(val);}
           else {outAmps(val);}
-          delay(dly);
+          //delay(dly);
+          blink(1);
           val+=step;
         }
 }
@@ -167,6 +171,14 @@ void setup() {
   CSV_INIT
   CSV_HIGH
   CSA_HIGH
+
+/*bitSet(DDR_MOSI,MOSIPIN); //pinMode(MOSIPIN,OUTPUT);
+while(1){
+  bitSet(PORT_MOSI,MOSIPIN); //digitalWrite(MOSIPIN,HIGH);}
+  delay(3000);
+  bitClear(PORT_MOSI,MOSIPIN); //digitalWrite(MOSIPIN,LOW);}
+  delay(3000);}*/
+
   SPI_START
   SPI_INIT
   
@@ -203,13 +215,13 @@ void loop()
       bid=getFloatValue();
       Serial.print("  ");Serial.print(bid);
       volts=(uint16_t)(bid*vFactor);
-
-      //Serial.print("  ");Serial.print(bid*1000/vFactor);
-      //volts=(uint16_t)(getFloatValue()*1000*vFactor);
       Serial.print(" ->");Serial.print(volts);
-      Serial.print("\n\rmAmps ? ");
-      amps=getValue();
       
+      Serial.print("\n\rmAmps ? ");
+      bid=getFloatValue();
+      Serial.print("  ");Serial.print(bid);
+      amps=(uint16_t)(bid*aFactor);
+      Serial.print(" ->");Serial.print(amps);
       
       outAmps(amps);
       outVolts(volts);
@@ -221,12 +233,12 @@ void loop()
 
       Serial.print("\ndurée step ?");
       dly=getValue();
-      Serial.print("\namps maxi ?");
-      amps=getValue();
+      Serial.print("\namps maxi (mA)?");
+      bid=getFloatValue();
+      amps=(uint16_t)(bid*aFactor);
       Serial.print("\nvolts beg ? ");
       bid=getFloatValue();
       voltsB=(uint16_t)(bid*vFactor);
-      //voltsB=(uint16_t)(getFloatValue()*vFactor);
       Serial.print("\nvolts end ? ");
       bid=getFloatValue();
       voltsE=(uint16_t)(bid*vFactor);
@@ -261,9 +273,11 @@ void loop()
       Serial.print("\nvolts ?");
       volts=getValue();
       Serial.print("\namps beg ? ");
-      ampsB=getValue();
+      bid=getFloatValue();
+      ampsB=(uint16_t)(bid*aFactor);
       Serial.print("\nvamps end ? ");
-      ampsE=getValue();
+      bid=getFloatValue();
+      ampsE=(uint16_t)(bid*aFactor);
       Serial.print("\nnbre steps ? ");
       stepsN=getValue();
 
