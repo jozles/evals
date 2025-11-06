@@ -4,7 +4,8 @@
 #define LED        4          // pin pour Led (13 pris par le clk du SPI)
 
 #define CSA_PIN    1          // pin pour CSA du nrf
-#define CSV_PIN    2         // pin pour CS du SPI
+#define CSV_PIN    2          // pin pour CS du SPI
+#define CSM_PIN    2          // pin pour CS du CS6550
 #define CLKPIN     5
 #define MISOPIN    4
 #define MOSIPIN    3
@@ -15,17 +16,20 @@
 #define POWER_ON_MCP bitSet(DDR_PWR_MCP,BIT_PWR_MCP);bitClear(PORT_PWR_MCP,BIT_PWR_MCP);
 #define POWER_OFF_MCP bitSet(PORT_PWR_MCP,BIT_PWR_MCP);
 
-#define PORT_CS PORTB
-#define PORT_CSV PORTB
+
+//#define PORT_CS PORTB
+#define PORT_CSV  PORTB
 #define PORT_CSA  PORTB
+#define PORT_CSM  PORTC
 #define PORT_MOSI PORTB
-#define PORT_MISO  PORTB
-#define PORT_CLK PORTB
-#define DDR_CSV DDRB
-#define DDR_CSA  DDRB
-#define DDR_MOSI DDRB
+#define PORT_MISO PORTB
+#define PORT_CLK  PORTB
+#define DDR_CSV   DDRB
+#define DDR_CSA   DDRB
+#define DDR_CSM   DDRC
+#define DDR_MOSI  DDRB
 #define DDR_MISO  DDRB
-#define DDR_CLK DDRB
+#define DDR_CLK   DDRB
 
 #define CSA_INIT   bitSet(DDR_CSA,CSA_PIN); //pinMode(CSA_PIN,OUTPUT);
 #define CSA_OFF    bitClear(DDR_CSA,CSA_PIN); //pinMode(CSA_PIN,INPUT);

@@ -19,20 +19,36 @@ uint8_t vbuf=0;   // 1 buffered ; 0 unbuffered
 uint8_t vga=1;    // 1 gain 1 ; 0 gain 2
 uint8_t vshdn=1;  // 1 active ; 0 shutdown
 
-void blink(uint8_t num)
+void blink(uint8_t num,uint32_t dly)
 {
   if(num!=0){
-    for(uint8_t i=0;i<num;i++){digitalWrite(led,HIGH);delay(10);digitalWrite(led,LOW);delay(10);}
+    for(uint8_t i=0;i<num;i++){digitalWrite(led,HIGH);delay(dly);digitalWrite(led,LOW);delay(10);}
   }
 }
 
-void spi_Write(byte* data,uint8_t port,uint8_t pin)
+void blink(uint8_t num)
 {
-    bitClear(PORT_CS,pin);
+  blink(num,10);
+}
+
+void spi_Write(byte* data,char port,uint8_t pin)
+{
+  switch (port){
+    case 'A':bitClear(PORT_CSA,pin);break;
+    case 'V':bitClear(PORT_CSV,pin);break;
+    case 'M':bitClear(PORT_CSM,pin);break;
+    default: break;
+  }
     SPI.transfer(*data);
     SPI.transfer(*(data+1));
-    bitSet(PORT_CS,pin);
+  switch (port){
+    case 'A':bitSet(PORT_CSA,pin);break;
+    case 'V':bitSet(PORT_CSV,pin);break;
+    case 'M':bitSet(PORT_CSM,pin);break;
+    default: break;
+  }
 }
+
 char getCh()
 {
   while(!Serial.available()){}
@@ -121,7 +137,7 @@ void outVolts( uint16_t val)
   
   value[0] |= (vbuf<<(BUF-8)) | (vga<<(GA-8)) | (vshdn<<(SHDN-8)) ;
 
-  spi_Write(value,PORT_CSV,CSV_PIN);
+  spi_Write(value,'V',CSV_PIN);
 }
 
 void outAmps( uint16_t val)
@@ -133,7 +149,7 @@ void outAmps( uint16_t val)
   
   value[0] |= (vbuf<<(BUF-8)) | (vga<<(GA-8)) | (vshdn<<(SHDN-8)) ;
 
-  spi_Write(value,PORT_CSA,CSA_PIN);
+  spi_Write(value,'A',CSA_PIN);
 }
 
 void ramp(char what,uint16_t valB,uint16_t valE,uint16_t stepsN,uint32_t dly)
@@ -153,7 +169,7 @@ void ramp(char what,uint16_t valB,uint16_t valE,uint16_t stepsN,uint32_t dly)
           if(what=='V'){outVolts(val);}
           else {outAmps(val);}
           //delay(dly);
-          blink(1);
+          blink(1,dly);
           val+=step;
         }
 }
@@ -162,6 +178,17 @@ void setup() {
 
   Serial.begin(115200);
   Serial.print("+start MCP4901 ");delay(10);
+
+
+  /*Serial.print("log...");delay(10);
+  float logtest[10];
+  uint32_t beg=micros();
+
+  for(uint8_t i=0;i<10;i++){logtest[i]=log10((float)(i+1));}
+  uint32_t end=micros();
+  Serial.print(" done in ");Serial.print(end-beg);Serial.println(" uS");
+  for(uint8_t i=0;i<10;i++){Serial.print("log10(");Serial.print(i+1);Serial.print(")=");Serial.println(logtest[i]);}
+  */
 
   POWER_ON_MCP
 
