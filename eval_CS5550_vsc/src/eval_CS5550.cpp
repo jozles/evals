@@ -93,6 +93,8 @@ uint8_t regCodes[]={CONFIG,AIN1OFF,AIN1GAIN,AIN2OFF,AIN2GAIN,CYCCOUNT,AIN1OUT,AI
 /* LED */
 
 #define LED 4
+#define PORT_LED PORTD
+#define BIT_LED 4
 #define ONLED HIGH
 #define OFFLED LOW
 
@@ -176,28 +178,30 @@ void menu()
   Serial.println("d display ; k cont single ; c conversion ; s stop ; f filter ; o instant ; r registers ; m clear mini/maxi");Serial.print("H shunt ; C config ; S status ; M mask ; G Gain1 ; F Gain2 ; O Offset1 ; P Offset2 ; Y Cycles ; v value ");
 }
 
+void dynBlk(){
+  if((millis()-tmpBlink)>1000){     // && bitRead(PORT_LED,BIT_LED)==0){
+    bitSet(PORT_LED,BIT_LED);
+    tmpBlink=millis();}
+  if((millis()-tmpBlink)>100 && bitRead(PORT_LED,BIT_LED)!=0){
+    bitClear(PORT_LED,BIT_LED);
+    tmpBlink=millis();}
+}
 
 void setup() {
 
+    /* SPI */
+
+    pinMode(SS, OUTPUT); digitalWrite(SS,HIGH);
+    SPI.begin();
+    SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
+
   Serial.begin(115200);delay(1000);
-  Serial.println("\n\nready");  
 
   pinMode(INT,INPUT_PULLUP);
   //pinMode(LED+1,OUTPUT);digitalWrite(LED+1,LOW);
   pinMode(LED, OUTPUT); digitalWrite(LED, LOW);
 
-  a='\0';
-
-  while(a='\0'){
-    digitalWrite(LED,HIGH);delay(100);digitalWrite(LED,LOW);delay(1000);
-    if(Serial.available()){a=Serial.read();}
-  }
-
-  /* SPI */
-
-    pinMode(SS, OUTPUT); digitalWrite(SS,HIGH);
-    SPI.begin();
-    SPI.beginTransaction(SPISettings(2000000, MSBFIRST, SPI_MODE0));
+  a=inch("\n\nready");
 
   /* CS5550 INITS */
 
@@ -242,7 +246,7 @@ void loop() {
 
   /* LED */
 
-  if (millis() > (tmpBlink + perBlink)) {
+/*  if (millis() > (tmpBlink + perBlink)) {
     tmpBlink = millis();
     if (digitalRead(LED) == ONLED) {
       digitalWrite(LED, OFFLED);
@@ -252,7 +256,8 @@ void loop() {
       digitalWrite(LED, ONLED);
       perBlink = TBLINKON;
     } 
-  }
+  }*/
+    dynBlk();
 
   /* pooling INT */
 
@@ -558,6 +563,7 @@ char inch(const char* data)
   char a=' ';
   while(a==' '){
     if (Serial.available()) {a=Serial.read();}
+    else dynBlk();
   }
   Serial.print(a);Serial.println();
   return a;
